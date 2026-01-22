@@ -1,22 +1,13 @@
 {
-  "name": "web-projects",
+  "name": "code-edde-full-app",
   "version": "1.0.0",
-  "main": "index.js",
+  "private": true,
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "axios": "^1.13.2",
-    "express": "^5.2.1",
-    "git": "^0.1.5",
-    "socket.io": "^4.8.3"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.11"
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend/code-editor && npm install",
+    "build:frontend": "cd frontend/code-editor && npm run build",
+    "build": "npm run install:backend && npm run install:frontend && npm run build:frontend",
+    "start": "node backend/index.js"
   }
 }
