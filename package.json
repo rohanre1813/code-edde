@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "cd frontend/code-editor && npm install && npm run build",
     "start": "cd backend && npm install && node index.js"
   }
 }
