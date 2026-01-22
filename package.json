@@ -4,10 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "install:backend": "cd backend && npm install",
-    "install:frontend": "cd frontend/code-editor && npm install",
-    "build:frontend": "cd frontend/code-editor && npm run build",
-    "build": "npm run install:backend && npm run install:frontend && npm run build:frontend",
-    "start": "node backend/index.js"
+    "start": "cd backend && npm install && node index.js"
   }
 }
