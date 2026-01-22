@@ -12,26 +12,28 @@ const io = new Server(server, { cors: { origin: "*" } });
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const url = `https://code-edde.onrender.com`;
-const interval = 30000;
+const frontendPath = path.join(__dirname, "../frontend/code-editor/dist");
 
+// Serve frontend static files
+app.use(express.static(frontendPath));
+
+// SPA fallback for all unmatched routes
+app.use((req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
+
+// Keep Render awake
+const url = `https://code-edde.onrender.com`; // Replace with your deployed URL
+const interval = 30000;
 function reloadWebsite() {
   axios
     .get(url)
     .then(() => console.log("Website reloaded"))
     .catch((error) => console.error(`Error : ${error.message}`));
 }
-
 setInterval(reloadWebsite, interval);
 
-const frontendPath = path.join(__dirname, "../frontend/code-editor/dist");
-app.use(express.static(frontendPath));
-
-app.get("/*", (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
-});
-
-
+// Socket.IO rooms
 const rooms = new Map();
 
 io.on("connection", (socket) => {
