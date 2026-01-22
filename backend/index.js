@@ -27,9 +27,10 @@ setInterval(reloadWebsite, interval);
 const frontendPath = path.join(__dirname, "../frontend/code-editor/dist");
 app.use(express.static(frontendPath));
 
-app.get("*", (req, res) => {
+app.get("/*", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
+
 
 const rooms = new Map();
 
