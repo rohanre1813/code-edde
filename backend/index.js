@@ -87,17 +87,32 @@ io.on("connection", (socket) => {
   });
 
   socket.on("compilecode", async ({ roomid, code, language, version }) => {
-    if (rooms.has(roomid)) {
-      const room = rooms.get(roomid);
-      const response = await axios.post("https://emkc.org/api/v2/piston/execute", {
-        language,
-        version,
-        files: [{ content: code }]
-      });
-      room.output = response.data.run.output;
-      io.to(roomid).emit("coderesponse", response.data);
-    }
-  });
+  if (rooms.has(roomid)) {
+    const room = rooms.get(roomid);
+
+    const languageMap = {
+      cpp: 54,
+      python: 71,
+      java: 62,
+      javascript: 63
+    };
+
+    const response = await axios.post(
+      "https://ce.judge0.com/submissions/?base64_encoded=false&wait=true",
+      {
+        source_code: code,
+        language_id: languageMap[language]
+      }
+    );
+
+    room.output =
+      response.data.stdout ||
+      response.data.stderr ||
+      response.data.compile_output;
+
+    io.to(roomid).emit("coderesponse", response.data);
+  }
+});
 
   socket.on("disconnect", () => {
     if (currentroom && currentuser) {
