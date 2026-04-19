@@ -14,7 +14,7 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
   const [version, setversion] = useState("*");
   const [tabStatus, setTabStatus] = useState("");
 
-  // Language updates
+  // Language sync
   useEffect(() => {
     const handleLanguage = (lang) => setlanguage(lang);
     socket.on("languageupdate", handleLanguage);
@@ -51,7 +51,7 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
     return () => window.removeEventListener("beforeunload", handleUnload);
   }, []);
 
-  // Tab switch detection
+  // Tab switch emit
   useEffect(() => {
     const handleVisibility = () => {
       socket.emit("tabswitch", {
@@ -66,7 +66,7 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
       document.removeEventListener("visibilitychange", handleVisibility);
   }, [roomid, name]);
 
-  // Listen for tab + output
+  // Tab + output listener
   useEffect(() => {
     const handleTabStatus = ({ username, state }) => {
       if (state === "hidden")
@@ -110,14 +110,14 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-slate-900 text-white">
+    <div className="flex flex-col lg:flex-row h-screen bg-slate-900 text-white overflow-hidden">
 
       {/* Sidebar */}
       <motion.div
         initial={{ x: -300 }}
         animate={{ x: 0 }}
         transition={{ type: "spring", stiffness: 120 }}
-        className="w-full md:w-80 bg-gradient-to-b from-slate-800 to-slate-900 p-4 md:p-6 flex flex-col overflow-y-auto"
+        className="w-full lg:w-80 xl:w-96 bg-gradient-to-b from-slate-800 to-slate-900 p-4 lg:p-6 flex flex-col overflow-y-auto border-b lg:border-b-0 lg:border-r border-slate-700"
       >
         <h2 className="text-xl font-bold mb-4">Room Info</h2>
 
@@ -135,15 +135,15 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
           onClick={copy}
-          className="py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 text-white font-semibold shadow-lg"
+          className="py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 font-semibold"
         >
-          Copy To Clipboard
+          Copy Room ID
         </motion.button>
 
         {/* Users */}
-        <div className="mt-4">
+        <div className="mt-4 flex-1">
           <p className="text-sm text-slate-400 mb-2">Users</p>
-          <ul className="space-y-2">
+          <ul className="space-y-2 max-h-40 overflow-y-auto">
             {users.map((user, index) => (
               <motion.li
                 key={index}
@@ -184,17 +184,19 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
             localStorage.removeItem("session");
             joined(false);
           }}
-          className="mt-4 py-2 rounded-xl bg-red-500 text-white font-semibold"
+          className="mt-4 py-2 rounded-xl bg-red-500 font-semibold"
         >
           Leave Room
         </motion.button>
       </motion.div>
 
       {/* Editor Section */}
-      <div className="flex-1 p-3 md:p-6 bg-slate-800 flex flex-col">
+      <div className="flex-1 flex flex-col p-3 lg:p-6 bg-slate-800 overflow-hidden">
 
-        <div className="flex-1 bg-slate-900 rounded-2xl p-3 md:p-4 flex flex-col">
-          <div className="h-[300px] md:h-[400px] lg:h-[500px] border border-slate-700 rounded-lg overflow-hidden">
+        <div className="flex-1 flex flex-col bg-slate-900 rounded-2xl p-3 lg:p-4 shadow-inner">
+
+          {/* Editor */}
+          <div className="flex-1 min-h-[250px] border border-slate-700 rounded-lg overflow-hidden">
             <Editor
               height="100%"
               value={code}
@@ -204,17 +206,19 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
             />
           </div>
 
+          {/* Run button */}
           <motion.button
             onClick={runCode}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            className="mt-3 w-full md:w-auto py-2 bg-green-500 rounded-xl font-semibold"
+            className="mt-3 w-full sm:w-40 py-2 bg-green-500 rounded-xl font-semibold"
           >
             Run Code
           </motion.button>
 
+          {/* Output */}
           <textarea
-            className="mt-3 bg-black/70 text-white rounded-md p-3 h-[120px] md:h-[150px] overflow-auto"
+            className="mt-3 bg-black/70 text-white rounded-md p-3 h-[120px] sm:h-[140px] overflow-auto resize-none"
             value={output}
             readOnly
             placeholder="Output will appear here"
@@ -224,3 +228,4 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
     </div>
   );
 }
+
