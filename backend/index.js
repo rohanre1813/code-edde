@@ -23,7 +23,7 @@ app.use((req, res) => {
 });
 
 // Keep Render awake
-const url = `https://code-edde.onrender.com`; // Replace with your deployed URL
+const url = `https://code-edde.onrender.com`;
 const interval = 30000;
 function reloadWebsite() {
   axios
@@ -86,35 +86,41 @@ io.on("connection", (socket) => {
     io.in(roomid).emit("languageupdate", language);
   });
 
+  // ✅ FIXED: send piston-like response structure
   socket.on("compilecode", async ({ roomid, code, language, version }) => {
-  if (rooms.has(roomid)) {
-    const room = rooms.get(roomid);
+    if (rooms.has(roomid)) {
+      const room = rooms.get(roomid);
 
-    const languageMap = {
-      cpp: 54,
-      python: 71,
-      java: 62,
-      javascript: 63
-    };
+      const languageMap = {
+        cpp: 54,
+        python: 71,
+        java: 62,
+        javascript: 63
+      };
 
-    const response = await axios.post(
-      "https://ce.judge0.com/submissions/?base64_encoded=false&wait=true",
-      {
-        source_code: code,
-        language_id: languageMap[language]
-      }
-    );
+      const response = await axios.post(
+        "https://ce.judge0.com/submissions/?base64_encoded=false&wait=true",
+        {
+          source_code: code,
+          language_id: languageMap[language]
+        }
+      );
 
-    room.output =
-      response.data.stdout ||
-      response.data.stderr ||
-      response.data.compile_output;
+      const output =
+        response.data.stdout ||
+        response.data.stderr ||
+        response.data.compile_output;
 
-    io.to(roomid).emit("coderesponse", {
-      output: room.output
-    });
-  }
-});
+      room.output = output;
+
+      // 👇 mimic piston format for frontend compatibility
+      io.to(roomid).emit("coderesponse", {
+        run: {
+          output: output
+        }
+      });
+    }
+  });
 
   socket.on("disconnect", () => {
     if (currentroom && currentuser) {
