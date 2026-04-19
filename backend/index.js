@@ -110,7 +110,9 @@ io.on("connection", (socket) => {
       response.data.stderr ||
       response.data.compile_output;
 
-    io.to(roomid).emit("coderesponse", response.data);
+    io.to(roomid).emit("coderesponse", {
+      output: room.output
+    });
   }
 });
 
