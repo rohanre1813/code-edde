@@ -1,3 +1,4 @@
+
 import { motion } from "framer-motion";
 import Select from "react-select";
 import Editor from "@monaco-editor/react";
@@ -9,27 +10,29 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
   const [code, setcode] = useState("// Your code here");
   const [users, setusers] = useState([]);
   const [typing, settyping] = useState("");
-  const [output, setOutput] = useState([]);
-  const[version,setversion]=useState("*")
+  const [output, setOutput] = useState("");
+  const [version, setversion] = useState("*");
   const [tabStatus, setTabStatus] = useState("");
 
-  // Language updates from server
+  // Language updates
   useEffect(() => {
     const handleLanguage = (lang) => setlanguage(lang);
     socket.on("languageupdate", handleLanguage);
     return () => socket.off("languageupdate", handleLanguage);
   }, []);
 
-
-  // Users, typing, and code updates
+  // Users + typing + code sync
   useEffect(() => {
     const handleUsers = (users) => setusers(users);
+
     socket.on("codeupdate", (newCode) => setcode(newCode));
     socket.on("userjoined", handleUsers);
+
     socket.on("usertyping", (username) => {
       settyping(`${username.slice(0, 8)}... is typing`);
       setTimeout(() => settyping(""), 3000);
     });
+
     return () => {
       socket.off("userjoined", handleUsers);
       socket.off("codeupdate");
@@ -37,21 +40,18 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
     };
   }, []);
 
-  // Leave room on unload
+  // Leave room on refresh
   useEffect(() => {
-  const handleUnload = () => {
-    socket.emit("leaveroom");
+    const handleUnload = () => {
+      socket.emit("leaveroom");
+      localStorage.removeItem("session");
+    };
 
-    localStorage.removeItem("session");
-  };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, []);
 
-  window.addEventListener("beforeunload", handleUnload);
-
-  return () => window.removeEventListener("beforeunload", handleUnload);
-}, []);
-
-
-  // Tab switch detection (emit)
+  // Tab switch detection
   useEffect(() => {
     const handleVisibility = () => {
       socket.emit("tabswitch", {
@@ -60,26 +60,33 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
         state: document.visibilityState,
       });
     };
+
     document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
   }, [roomid, name]);
 
-  // Listen for other users' tab switch
+  // Listen for tab + output
   useEffect(() => {
     const handleTabStatus = ({ username, state }) => {
-      if (state === "hidden") setTabStatus(`${username.slice(0, 8)}... switched tab`);
-      else if (state === "visible") setTabStatus(`${username.slice(0, 8)}... came back`);
+      if (state === "hidden")
+        setTabStatus(`${username.slice(0, 8)}... switched tab`);
+      else if (state === "visible")
+        setTabStatus(`${username.slice(0, 8)}... came back`);
+
       setTimeout(() => setTabStatus(""), 3000);
     };
-    socket.on("coderesponse",(response)=>{
-      setOutput(response.run.output)
-      
-    })
-    socket.on("tabstatus", handleTabStatus);
-    return () => {socket.off("tabstatus", handleTabStatus);
-      socket.off("coderesponse")
-    }
 
+    socket.on("coderesponse", (response) => {
+      setOutput(response.run.output);
+    });
+
+    socket.on("tabstatus", handleTabStatus);
+
+    return () => {
+      socket.off("tabstatus", handleTabStatus);
+      socket.off("coderesponse");
+    };
   }, []);
 
   const handlecode = (newCode) => {
@@ -98,25 +105,28 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
 
   const copy = () => navigator.clipboard.writeText(roomid);
 
-    const runCode = () => {
-      socket.emit("compilecode", { roomid, code,language,version });
-    };
+  const runCode = () => {
+    socket.emit("compilecode", { roomid, code, language, version });
+  };
 
   return (
-    <div className="flex h-screen bg-slate-900 text-white">
+    <div className="flex flex-col md:flex-row h-screen bg-slate-900 text-white">
+
       {/* Sidebar */}
       <motion.div
         initial={{ x: -300 }}
         animate={{ x: 0 }}
         transition={{ type: "spring", stiffness: 120 }}
-        className="w-80 bg-gradient-to-b from-slate-800 to-slate-900 p-6 flex flex-col"
+        className="w-full md:w-80 bg-gradient-to-b from-slate-800 to-slate-900 p-4 md:p-6 flex flex-col overflow-y-auto"
       >
         <h2 className="text-xl font-bold mb-4">Room Info</h2>
-        <div className="mb-6">
+
+        <div className="mb-4">
           <p className="text-sm text-slate-400">Room ID</p>
-          <p className="font-semibold text-lg">{roomid}</p>
+          <p className="font-semibold text-lg break-all">{roomid}</p>
         </div>
-        <div className="mb-6">
+
+        <div className="mb-4">
           <p className="text-sm text-slate-400">UserName</p>
           <p className="font-semibold text-lg">{name}</p>
         </div>
@@ -125,96 +135,91 @@ export default function EditorWithSidebar({ name, roomid, joined }) {
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
           onClick={copy}
-          className="mt-0.8 py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 text-white font-semibold shadow-lg hover:shadow-indigo-500/40 transition"
+          className="py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 text-white font-semibold shadow-lg"
         >
           Copy To Clipboard
         </motion.button>
 
         {/* Users */}
-        <div className="mb-6">
+        <div className="mt-4">
           <p className="text-sm text-slate-400 mb-2">Users</p>
           <ul className="space-y-2">
             {users.map((user, index) => (
               <motion.li
                 key={index}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 }}
-                className="flex items-center justify-between px-3 py-1 rounded-md hover:bg-slate-700 transition"
+                className="flex items-center justify-between px-3 py-1 rounded-md hover:bg-slate-700"
               >
-                {tabStatus && <span className="text-xs text-yellow-400 animate-pulse">{tabStatus}</span>}
+                {tabStatus && (
+                  <span className="text-xs text-yellow-400 animate-pulse">
+                    {tabStatus}
+                  </span>
+                )}
                 <span>{user.slice(0, 8)}...</span>
               </motion.li>
             ))}
           </ul>
         </div>
 
-        <span className="text-xs text-green-400 animate-pulse">{typing}</span>
+        <span className="text-xs text-green-400 mt-2">{typing}</span>
 
-        {/* Language Selection */}
-        <div className="mb-4">
+        {/* Language */}
+        <div className="mt-4">
           <p className="text-sm text-slate-400 mb-1">Select Language</p>
           <Select
             options={languages}
             value={languages.find((l) => l.value === language)}
             onChange={(selectedOption) => {
               setlanguage(selectedOption.value);
-              socket.emit("languagechange", { roomid, language: selectedOption.value });
-            }}
-            placeholder="Choose language..."
-            styles={{
-              control: (provided) => ({ ...provided, backgroundColor: "#1e293b", borderColor: "#334155", color: "white" }),
-              menu: (provided) => ({ ...provided, backgroundColor: "#1e293b" }),
-              singleValue: (provided) => ({ ...provided, color: "white" }),
-              option: (provided, state) => ({ ...provided, backgroundColor: state.isFocused ? "#334155" : "#1e293b", color: "white" }),
+              socket.emit("languagechange", {
+                roomid,
+                language: selectedOption.value,
+              });
             }}
           />
         </div>
 
-        {/* Confirm & Leave */}
-        <motion.button className="mt-auto py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 text-white font-semibold shadow-lg hover:shadow-indigo-500/40 transition">
-          Confirm Language
-        </motion.button>
         <motion.button
           onClick={() => {
             socket.emit("leaveroom");
             localStorage.removeItem("session");
             joined(false);
           }}
-          className="mt-2 py-2 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 text-white font-semibold shadow-lg hover:shadow-indigo-500/40 transition"
+          className="mt-4 py-2 rounded-xl bg-red-500 text-white font-semibold"
         >
           Leave Room
         </motion.button>
       </motion.div>
 
-      {/* Editor + Output */}
-      <div className="flex-1 p-6 bg-slate-800 overflow-auto flex flex-col">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="flex-1 w-full bg-slate-900 rounded-2xl p-4 shadow-inner flex flex-col"
-        >
-          <p className="text-slate-500 mb-2">Your code editor will appear here.</p>
-          <div className="h-87 border-2 border-slate-700 rounded-lg p-2 bg-slate-800">
-            <Editor height="100%" value={code} language={language} theme="vs-dark" onChange={handlecode} />
+      {/* Editor Section */}
+      <div className="flex-1 p-3 md:p-6 bg-slate-800 flex flex-col">
+
+        <div className="flex-1 bg-slate-900 rounded-2xl p-3 md:p-4 flex flex-col">
+          <div className="h-[300px] md:h-[400px] lg:h-[500px] border border-slate-700 rounded-lg overflow-hidden">
+            <Editor
+              height="100%"
+              value={code}
+              language={language}
+              theme="vs-dark"
+              onChange={handlecode}
+            />
           </div>
 
-           
-            <motion.button
-              onClick={runCode}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="mt-4 py-2 rounded-xl bg-green-500 text-white font-semibold shadow-lg hover:shadow-green-400/40 transition"
-            >
-              Run Code
-            </motion.button>
-          
+          <motion.button
+            onClick={runCode}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="mt-3 w-full md:w-auto py-2 bg-green-500 rounded-xl font-semibold"
+          >
+            Run Code
+          </motion.button>
 
-          <textarea className="mt-4 bg-black/70 text-white rounded-md p-3 h-25 overflow-auto" value={output} readOnly placeholder="output will appear here">
-        
-          </textarea>
-        </motion.div>
+          <textarea
+            className="mt-3 bg-black/70 text-white rounded-md p-3 h-[120px] md:h-[150px] overflow-auto"
+            value={output}
+            readOnly
+            placeholder="Output will appear here"
+          />
+        </div>
       </div>
     </div>
   );
